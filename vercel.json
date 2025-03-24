@@ -2,9 +2,16 @@
     "version": 2,
     "builds": [
       {
-        "src": "bd.js", 
+        "src": "server.js",
         "use": "@vercel/node"
+      }
+    ],
+    "routes": [
+      {
+        "src": "/(.*)",
+        "dest": "server.js"
       }
     ]
   }
+  
   
