@@ -4,7 +4,7 @@ const conectarDB = require("./Config/db");
 require("dotenv").config();
 
 // Importar las rutas
-const TerrarioRoutes = require("./Routes/TerrarioRoutes");
+const TerrarioRoutes = require("./routes/TerrarioRoutes");
 const UsuarioRoutes = require("./routes/UsuarioRoutes");
 
 const app = express();
@@ -20,12 +20,12 @@ conectarDB();
 // Rutas API existentes
 app.use("/api/usuarios", require("./routes/userRoutes"));
 app.use("/api/misiones", require("./routes/MisionRoutes"));
-app.use("/api/visiones", require("./Routes/VisionRoutes"));
-app.use("/api/terminos", require("./Routes/TerminoRoutes"));
-app.use("/api/politicas", require("./Routes/PoliticaRoutes"));
-app.use("/api/preguntas", require("./Routes/PreguntaRoutes"));
-app.use("/api/contactos", require("./Routes/ContactoRoutes"));
-app.use("/api/informaciones", require("./Routes/InformacionRoutes"));
+app.use("/api/visiones", require("./routes/VisionRoutes"));
+app.use("/api/terminos", require("./routes/TerminoRoutes"));
+app.use("/api/politicas", require("./routes/PoliticaRoutes"));
+app.use("/api/preguntas", require("./routes/PreguntaRoutes"));
+app.use("/api/contactos", require("./routes/ContactoRoutes"));
+app.use("/api/informaciones", require("./routes/InformacionRoutes"));
 ///agregacion de la parte de productos
 //lol xD
 app.use("/api/productos", require("./routes/ProductoRoutes"));
