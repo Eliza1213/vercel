@@ -27,7 +27,6 @@ app.use("/api/preguntas", require("./routes/PreguntaRoutes"));
 app.use("/api/contactos", require("./routes/ContactoRoutes"));
 app.use("/api/informaciones", require("./routes/InformacionRoutes"));
 ///agregacion de la parte de productos
-//lol xD
 app.use("/api/productos", require("./routes/ProductoRoutes"));
 app.use("/api/usuarios", UsuarioRoutes);
 app.use("/api/terrario", TerrarioRoutes); // Ahora está correctamente importado
@@ -71,6 +70,11 @@ app.post("/api/control", (req, res) => {
 
   // Responder con éxito
   res.status(200).json({ message: "Acción realizada con éxito." });
+});
+
+// Nueva ruta raíz para evitar el error "No se puede obtener /"
+app.get("/", (req, res) => {
+  res.send("🚀 Bienvenido al backend de mi aplicación!");
 });
 
 // Iniciar servidor
