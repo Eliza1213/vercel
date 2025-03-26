@@ -23,6 +23,11 @@ const mqtt_server = "broker.emqx.io"; // Puedes cambiarlo a otro broker si hay p
 const mqtt_port = 1883;
 const mqtt_client_id = `TortuTerraBridge_${Math.random().toString(16).substr(2, 8)}`;
 
+// Crear cliente MQTT
+const mqttClient = mqtt.connect(`mqtt://${mqtt_server}:${mqtt_port}`, {
+  clientId: mqtt_client_id,
+});
+
 // Estado del terrario
 let terrarioStatus = {
   temperature: 25.0,
