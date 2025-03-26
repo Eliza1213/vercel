@@ -3,6 +3,9 @@ const cors = require("cors");
 const conectarDB = require("./Config/db");
 require("dotenv").config();
 
+// Importar las rutas
+const TerrarioRoutes = require("./routes/TerrarioRoutes");
+const UsuarioRoutes = require("./routes/UsuarioRoutes");
 
 const app = express();
 
@@ -12,6 +15,14 @@ app.use(cors());
 
 // Conectar a la base de datos
 conectarDB();
+
+// Manejo de favicon
+app.get("/favicon.ico", (req, res) => res.status(204));
+
+// Ruta raíz
+app.get("/", (req, res) => {
+  res.send("Bienvenido a Terrario API.");
+});
 
 // Rutas API existentes
 app.use("/api/usuarios", require("./routes/userRoutes"));
