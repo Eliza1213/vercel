@@ -86,6 +86,9 @@ function initializeMQTTConnection() {
   }
 }
 
+// Manejo de favicon
+app.get("/favicon.ico", (req, res) => res.status(204));
+
 // Rutas API existentes
 app.use("/api/usuarios", require("./routes/userRoutes"));
 app.use("/api/misiones", require("./routes/MisionRoutes"));
