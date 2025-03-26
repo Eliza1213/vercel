@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const conectarDB = require("./Config/db");
+const mqtt = require('mqtt');
 require("dotenv").config();
 
 // Importar las rutas
@@ -17,6 +18,65 @@ app.use(cors());
 // Conectar a la base de datos
 conectarDB();
 
+// Configuración MQTT
+const mqtt_server = "broker.emqx.io";
+const mqtt_port = 1883;
+const mqtt_client_id = "TortuTerraBridge_" + Math.random().toString(16).substr(2, 8);
+
+// Estado del terrario
+let terrarioStatus = {
+  temperature: 25.0,
+  fanState: false,
+  foodLevel: "Regular",
+  turtleActivity: false,
+  stableTemp: 24.0,
+  maxTemp: 30.0,
+  lampState: false
+};
+
+// Crear cliente MQTT
+const mqttClient = mqtt.connect("mqtt://${mqtt_server}:${mqtt_port}", {
+  clientId: mqtt_client_id
+});
+
+// Conexión MQTT
+mqttClient.on('connect', function () {
+  console.log('Conectado a MQTT broker');
+  mqttClient.subscribe('tortu_terra/#', function (err) {
+    if (err) {
+      console.error('Error al suscribirse a tópicos MQTT:', err);
+    } else {
+      console.log('Suscrito a tópicos tortu_terra/#');
+    }
+  });
+});
+
+// Recibir mensajes MQTT
+mqttClient.on('message', function (topic, message) {
+  console.log("Mensaje MQTT recibido [${topic}]: ${message.toString()}");
+  
+  if (topic === 'tortu_terra/status') {
+    try {
+      terrarioStatus = JSON.parse(message.toString());
+      console.log('Estado del terrario actualizado:', terrarioStatus);
+    } catch (error) {
+      console.error('Error al procesar estado del terrario:', error);
+    }
+  } else if (topic === 'tortu_terra/temperature') {
+    try {
+      terrarioStatus.temperature = parseFloat(message.toString());
+    } catch (error) {
+      console.error('Error al procesar temperatura:', error);
+    }
+  } else if (topic === 'tortu_terra/fan') {
+    terrarioStatus.fanState = message.toString() === 'on';
+  } else if (topic === 'tortu_terra/lamp') {
+    terrarioStatus.lampState = message.toString() === 'on';
+  } else if (topic === 'tortu_terra/turtle') {
+    terrarioStatus.turtleActivity = message.toString() === 'active';
+  }
+});
+
 // Rutas API existentes
 app.use("/api/usuarios", require("./routes/userRoutes"));
 app.use("/api/misiones", require("./routes/MisionRoutes"));
@@ -26,12 +86,16 @@ app.use("/api/politicas", require("./routes/PoliticaRoutes"));
 app.use("/api/preguntas", require("./routes/PreguntaRoutes"));
 app.use("/api/contactos", require("./routes/ContactoRoutes"));
 app.use("/api/informaciones", require("./routes/InformacionRoutes"));
-///agregacion de la parte de productos
 app.use("/api/productos", require("./routes/ProductoRoutes"));
 app.use("/api/usuarios", UsuarioRoutes);
-app.use("/api/terrario", TerrarioRoutes); // Ahora está correctamente importado
+app.use("/api/terrario", TerrarioRoutes);
 
-// Nueva ruta para el control de actuadores
+// Endpoint para obtener el estado del terrario
+app.get("/api/terrario/status", (req, res) => {
+  res.status(200).json(terrarioStatus);
+});
+
+// Ruta para el control de actuadores
 app.post("/api/control", (req, res) => {
   const { actuador, accion } = req.body;
 
@@ -40,44 +104,52 @@ app.post("/api/control", (req, res) => {
     return res.status(400).json({ message: "Datos incompletos: faltan actuador o acción." });
   }
 
-  console.log(`Recibido: Actuador - ${actuador}, Acción - ${accion}`);
+  console.log("Recibido: Actuador - ${actuador}, Acción - ${accion}");
 
-  // Lógica de control de actuadores
+  let comando = "";
+  
+  // Convertir parámetros HTTP a comandos MQTT
   switch (actuador) {
     case "fan":
-      if (accion === "on") {
-        console.log("Encendiendo el ventilador...");
-      } else if (accion === "off") {
-        console.log("Apagando el ventilador...");
-      } else {
-        return res.status(400).json({ message: "Acción no válida para el ventilador." });
-      }
+      comando = "fan";
       break;
-
     case "lamp":
-      if (accion === "on") {
-        console.log("Encendiendo la lámpara...");
-      } else if (accion === "off") {
-        console.log("Apagando la lámpara...");
-      } else {
-        return res.status(400).json({ message: "Acción no válida para la lámpara." });
-      }
+      comando = "lamp";
       break;
-
+    case "dispense":
+      comando = "dispense";
+      break;
     default:
       return res.status(400).json({ message: "Actuador no reconocido." });
   }
 
-  // Responder con éxito
-  res.status(200).json({ message: "Acción realizada con éxito." });
+  // Publicar comando en MQTT
+  const payload = JSON.stringify({ cmd: comando });
+  mqttClient.publish('tortu_terra/command', payload, function(err) {
+    if (err) {
+      console.error('Error al publicar mensaje MQTT:', err);
+      return res.status(500).json({ message: "Error al enviar comando al terrario." });
+    }
+    
+    console.log("Comando MQTT enviado: ${payload}");
+    res.status(200).json({ message: "Acción enviada al terrario con éxito." });
+  });
 });
 
-// Nueva ruta raíz para evitar el error "No se puede obtener /"
-app.get("/", (req, res) => {
-  res.send("🚀 Bienvenido al backend de mi aplicación!");
+// Manejo de errores MQTT
+mqttClient.on('error', function(error) {
+  console.error('Error en la conexión MQTT:', error);
+});
+
+mqttClient.on('close', function() {
+  console.log('Conexión MQTT cerrada');
+});
+
+mqttClient.on('reconnect', function() {
+  console.log('Intentando reconectar a MQTT');
 });
 
 // Iniciar servidor
 app.listen(port, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
+  console.log("🚀 Servidor corriendo en http://localhost:${port}");
 });
