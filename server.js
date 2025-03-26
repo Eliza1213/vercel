@@ -3,9 +3,7 @@ const cors = require("cors");
 const conectarDB = require("./Config/db");
 require("dotenv").config();
 
-// Importar las rutas
-const TerrarioRoutes = require("./Routes/TerrarioRoutes");
-const UsuarioRoutes = require("./routes/UsuarioRoutes");
+
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -27,8 +25,6 @@ app.use("/api/preguntas", require("./Routes/PreguntaRoutes"));
 app.use("/api/contactos", require("./Routes/ContactoRoutes"));
 app.use("/api/informaciones", require("./Routes/InformacionRoutes"));
 app.use("/api/productos", require("./routes/ProductoRoutes"));
-app.use("/api/usuarios", UsuarioRoutes);
-app.use("/api/terrario", TerrarioRoutes);
 
 // Exportar la aplicación
 module.exports = app;
