@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const conectarDB = require("./Config/db");
-const mqtt = require("mqtt");
+const mqtt = require('mqtt');
 require("dotenv").config();
 
 // Importar las rutas
@@ -18,7 +18,7 @@ app.use(cors());
 // Conectar a la base de datos
 conectarDB();
 
-// Configuración MQTT
+/// Configuración MQTT
 const mqtt_server = "broker.emqx.io"; // Puedes cambiarlo a otro broker si hay problemas
 const mqtt_port = 1883;
 const mqtt_client_id = `TortuTerraBridge_${Math.random().toString(16).substr(2, 8)}`;
@@ -33,11 +33,6 @@ let terrarioStatus = {
   maxTemp: 30.0,
   lampState: false
 };
-
-// Crear cliente MQTT
-const mqttClient = mqtt.connect(`mqtt://${mqtt_server}:${mqtt_port}`, {
-  clientId: mqtt_client_id
-});
 
 // Conexión MQTT
 mqttClient.on("connect", () => {
@@ -80,8 +75,16 @@ mqttClient.on("message", (topic, message) => {
     console.error("❌ Error al procesar mensaje MQTT:", error);
   }
 });
-
-// Rutas API
+// Rutas API existentes
+app.use("/api/usuarios", require("./routes/userRoutes"));
+app.use("/api/misiones", require("./routes/MisionRoutes"));
+app.use("/api/visiones", require("./routes/VisionRoutes"));
+app.use("/api/terminos", require("./routes/TerminoRoutes"));
+app.use("/api/politicas", require("./routes/PoliticaRoutes"));
+app.use("/api/preguntas", require("./routes/PreguntaRoutes"));
+app.use("/api/contactos", require("./routes/ContactoRoutes"));
+app.use("/api/informaciones", require("./routes/InformacionRoutes"));
+app.use("/api/productos", require("./routes/ProductoRoutes"));
 app.use("/api/usuarios", UsuarioRoutes);
 app.use("/api/terrario", TerrarioRoutes);
 
@@ -94,8 +97,9 @@ app.get("/api/terrario/status", (req, res) => {
 app.post("/api/control", (req, res) => {
   const { actuador, accion } = req.body;
 
+  // Verificar datos recibidos
   if (!actuador || !accion) {
-    return res.status(400).json({ message: "❌ Datos incompletos: faltan actuador o acción." });
+    return res.status(400).json({ message: "Datos incompletos: faltan actuador o acción." });
   }
 
   console.log(`📢 Recibido: Actuador - ${actuador}, Acción - ${accion}`);
