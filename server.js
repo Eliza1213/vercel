@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const conectarDB = require("./Config/db");
-const mqtt = require('mqtt');
+const mqtt = require("mqtt");
 require("dotenv").config();
 
 // Importar las rutas
@@ -9,7 +9,6 @@ const TerrarioRoutes = require("./routes/TerrarioRoutes");
 const UsuarioRoutes = require("./routes/UsuarioRoutes");
 
 const app = express();
-const port = process.env.PORT || 4000;
 
 // Middleware para parsear JSON y habilitar CORS
 app.use(express.json());
@@ -36,7 +35,7 @@ let terrarioStatus = {
   turtleActivity: false,
   stableTemp: 24.0,
   maxTemp: 30.0,
-  lampState: false
+  lampState: false,
 };
 
 // Conexión MQTT
@@ -80,6 +79,8 @@ mqttClient.on("message", (topic, message) => {
     console.error("❌ Error al procesar mensaje MQTT:", error);
   }
 });
+
+// Rutas API existentes
 // Rutas API existentes
 app.use("/api/usuarios", require("./routes/userRoutes"));
 app.use("/api/misiones", require("./routes/MisionRoutes"));
@@ -102,7 +103,6 @@ app.get("/api/terrario/status", (req, res) => {
 app.post("/api/control", (req, res) => {
   const { actuador, accion } = req.body;
 
-  // Verificar datos recibidos
   if (!actuador || !accion) {
     return res.status(400).json({ message: "Datos incompletos: faltan actuador o acción." });
   }
@@ -136,7 +136,5 @@ mqttClient.on("error", (error) => console.error("❌ Error en MQTT:", error));
 mqttClient.on("close", () => console.log("⚠️ Conexión MQTT cerrada"));
 mqttClient.on("reconnect", () => console.log("🔄 Intentando reconectar a MQTT"));
 
-// Iniciar servidor
-app.listen(port, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
-});
+// Exportar la aplicación
+module.exports = app;
