@@ -3,9 +3,6 @@ const cors = require("cors");
 const conectarDB = require("./Config/db");
 require("dotenv").config();
 
-// Importar las rutas
-const TerrarioRoutes = require("./routes/TerrarioRoutes");
-const UsuarioRoutes = require("./routes/UsuarioRoutes");
 
 const app = express();
 
