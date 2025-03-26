@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const conectarDB = require("./Config/db");
-const mqtt = require('mqtt');
+const mqtt = require("mqtt");
 require("dotenv").config();
 
 // Importar las rutas
@@ -19,9 +19,9 @@ app.use(cors());
 conectarDB();
 
 // Configuración MQTT
-const mqtt_server = "broker.emqx.io";
+const mqtt_server = "broker.emqx.io"; // Puedes cambiarlo a otro broker si hay problemas
 const mqtt_port = 1883;
-const mqtt_client_id = "TortuTerraBridge_" + Math.random().toString(16).substr(2, 8);
+const mqtt_client_id = `TortuTerraBridge_${Math.random().toString(16).substr(2, 8)}`;
 
 // Estado del terrario
 let terrarioStatus = {
@@ -35,58 +35,53 @@ let terrarioStatus = {
 };
 
 // Crear cliente MQTT
-const mqttClient = mqtt.connect("mqtt://${mqtt_server}:${mqtt_port}", {
+const mqttClient = mqtt.connect(`mqtt://${mqtt_server}:${mqtt_port}`, {
   clientId: mqtt_client_id
 });
 
 // Conexión MQTT
-mqttClient.on('connect', function () {
-  console.log('Conectado a MQTT broker');
-  mqttClient.subscribe('tortu_terra/#', function (err) {
+mqttClient.on("connect", () => {
+  console.log("✅ Conectado a MQTT broker:", mqtt_server);
+  mqttClient.subscribe("tortu_terra/#", (err) => {
     if (err) {
-      console.error('Error al suscribirse a tópicos MQTT:', err);
+      console.error("❌ Error al suscribirse a tópicos MQTT:", err);
     } else {
-      console.log('Suscrito a tópicos tortu_terra/#');
+      console.log("📡 Suscrito a: tortu_terra/#");
     }
   });
 });
 
 // Recibir mensajes MQTT
-mqttClient.on('message', function (topic, message) {
-  console.log("Mensaje MQTT recibido [${topic}]: ${message.toString()}");
-  
-  if (topic === 'tortu_terra/status') {
-    try {
-      terrarioStatus = JSON.parse(message.toString());
-      console.log('Estado del terrario actualizado:', terrarioStatus);
-    } catch (error) {
-      console.error('Error al procesar estado del terrario:', error);
+mqttClient.on("message", (topic, message) => {
+  console.log(`📩 Mensaje MQTT recibido [${topic}]: ${message.toString()}`);
+
+  try {
+    switch (topic) {
+      case "tortu_terra/status":
+        terrarioStatus = JSON.parse(message.toString());
+        console.log("✅ Estado del terrario actualizado:", terrarioStatus);
+        break;
+      case "tortu_terra/temperature":
+        terrarioStatus.temperature = parseFloat(message.toString());
+        break;
+      case "tortu_terra/fan":
+        terrarioStatus.fanState = message.toString() === "on";
+        break;
+      case "tortu_terra/lamp":
+        terrarioStatus.lampState = message.toString() === "on";
+        break;
+      case "tortu_terra/turtle":
+        terrarioStatus.turtleActivity = message.toString() === "active";
+        break;
+      default:
+        console.warn(`⚠️ Tópico desconocido: ${topic}`);
     }
-  } else if (topic === 'tortu_terra/temperature') {
-    try {
-      terrarioStatus.temperature = parseFloat(message.toString());
-    } catch (error) {
-      console.error('Error al procesar temperatura:', error);
-    }
-  } else if (topic === 'tortu_terra/fan') {
-    terrarioStatus.fanState = message.toString() === 'on';
-  } else if (topic === 'tortu_terra/lamp') {
-    terrarioStatus.lampState = message.toString() === 'on';
-  } else if (topic === 'tortu_terra/turtle') {
-    terrarioStatus.turtleActivity = message.toString() === 'active';
+  } catch (error) {
+    console.error("❌ Error al procesar mensaje MQTT:", error);
   }
 });
 
-// Rutas API existentes
-app.use("/api/usuarios", require("./routes/userRoutes"));
-app.use("/api/misiones", require("./routes/MisionRoutes"));
-app.use("/api/visiones", require("./routes/VisionRoutes"));
-app.use("/api/terminos", require("./routes/TerminoRoutes"));
-app.use("/api/politicas", require("./routes/PoliticaRoutes"));
-app.use("/api/preguntas", require("./routes/PreguntaRoutes"));
-app.use("/api/contactos", require("./routes/ContactoRoutes"));
-app.use("/api/informaciones", require("./routes/InformacionRoutes"));
-app.use("/api/productos", require("./routes/ProductoRoutes"));
+// Rutas API
 app.use("/api/usuarios", UsuarioRoutes);
 app.use("/api/terrario", TerrarioRoutes);
 
@@ -99,57 +94,40 @@ app.get("/api/terrario/status", (req, res) => {
 app.post("/api/control", (req, res) => {
   const { actuador, accion } = req.body;
 
-  // Verificar datos recibidos
   if (!actuador || !accion) {
-    return res.status(400).json({ message: "Datos incompletos: faltan actuador o acción." });
+    return res.status(400).json({ message: "❌ Datos incompletos: faltan actuador o acción." });
   }
 
-  console.log("Recibido: Actuador - ${actuador}, Acción - ${accion}");
+  console.log(`📢 Recibido: Actuador - ${actuador}, Acción - ${accion}`);
 
   let comando = "";
-  
-  // Convertir parámetros HTTP a comandos MQTT
   switch (actuador) {
     case "fan":
-      comando = "fan";
-      break;
     case "lamp":
-      comando = "lamp";
-      break;
     case "dispense":
-      comando = "dispense";
+      comando = actuador;
       break;
     default:
-      return res.status(400).json({ message: "Actuador no reconocido." });
+      return res.status(400).json({ message: "❌ Actuador no reconocido." });
   }
 
-  // Publicar comando en MQTT
-  const payload = JSON.stringify({ cmd: comando });
-  mqttClient.publish('tortu_terra/command', payload, function(err) {
+  const payload = JSON.stringify({ cmd: comando, accion });
+  mqttClient.publish("tortu_terra/command", payload, (err) => {
     if (err) {
-      console.error('Error al publicar mensaje MQTT:', err);
-      return res.status(500).json({ message: "Error al enviar comando al terrario." });
+      console.error("❌ Error al publicar mensaje MQTT:", err);
+      return res.status(500).json({ message: "❌ Error al enviar comando al terrario." });
     }
-    
-    console.log("Comando MQTT enviado: ${payload}");
-    res.status(200).json({ message: "Acción enviada al terrario con éxito." });
+    console.log(`📡 Comando MQTT enviado: ${payload}`);
+    res.status(200).json({ message: "✅ Acción enviada con éxito." });
   });
 });
 
 // Manejo de errores MQTT
-mqttClient.on('error', function(error) {
-  console.error('Error en la conexión MQTT:', error);
-});
-
-mqttClient.on('close', function() {
-  console.log('Conexión MQTT cerrada');
-});
-
-mqttClient.on('reconnect', function() {
-  console.log('Intentando reconectar a MQTT');
-});
+mqttClient.on("error", (error) => console.error("❌ Error en MQTT:", error));
+mqttClient.on("close", () => console.log("⚠️ Conexión MQTT cerrada"));
+mqttClient.on("reconnect", () => console.log("🔄 Intentando reconectar a MQTT"));
 
 // Iniciar servidor
 app.listen(port, () => {
-  console.log("🚀 Servidor corriendo en http://localhost:${port}");
+  console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
 });
